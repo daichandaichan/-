@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equal Tuning Visualizer & Metronome - Advanced</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f172a 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            border-bottom: 1px solid rgba(124, 58, 237, 0.3);
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            z-index: 10;
+        }
+
+        header h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(to right, #7c3aed, #06b6d4, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        main {
+            display: flex;
+            flex: 1;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+
+        .visualizer-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            max-height: 800px;
+            aspect-ratio: 1;
+        }
+
+        .control-panel {
+            width: 100%;
+            max-width: 380px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .control-section h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #a78bfa;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .bpm-display {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .bpm-display label {
+            font-size: 0.875rem;
+            color: #cbd5e1;
+        }
+
+        .bpm-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.875rem;
+            font-weight: 900;
+            color: #06b6d4;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #7c3aed, #06b6d4, #ec4899);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #06b6d4;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #06b6d4;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .time-signature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .time-signature-card {
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .time-signature-card.outer {
+            background: rgba(236, 72, 153, 0.1);
+            border-color: rgba(236, 72, 153, 0.3);
+        }
+
+        .ts-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-bottom: 0.25rem;
+        }
+
+        .ts-controls {
+            display: flex;
+            gap: 0.25rem;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .ts-input {
+            width: 40px;
+            padding: 0.25rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 0.25rem;
+            color: #f8fafc;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .time-signature-card.outer .ts-input {
+            border-color: rgba(236, 72, 153, 0.3);
+        }
+
+        .ts-separator {
+            color: #7c3aed;
+            font-weight: 700;
+        }
+
+        .time-signature-card.outer .ts-separator {
+            color: #ec4899;
+        }
+
+        .ts-duration {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
+        .volume-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .volume-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+        }
+
+        .volume-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #06b6d4;
+        }
+
+        .volume-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .volume-slider-container input[type="range"] {
+            flex: 1;
+        }
+
+        .volume-icon {
+            font-size: 0.875rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .sound-test-button {
+            padding: 0.5rem;
+            background: rgba(124, 58, 237, 0.2);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 0.25rem;
+            color: #a78bfa;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sound-test-button:hover {
+            background: rgba(124, 58, 237, 0.4);
+        }
+
+        .sound-test-button.outer {
+            border-color: rgba(236, 72, 153, 0.3);
+            color: #ec4899;
+        }
+
+        .sound-test-button.outer:hover {
+            background: rgba(236, 72, 153, 0.2);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            color: white;
+            flex: 1.5;
+        }
+
+        .play-button:hover {
+            background: linear-gradient(135deg, #8b5cf6, #c084fc);
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+        }
+
+        .play-button.playing {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+        }
+
+        .play-button.playing:hover {
+            background: linear-gradient(135deg, #06d6ff, #0ea5e9);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+        }
+
+        .reset-button {
+            background: transparent;
+            border: 1px solid rgba(124, 58, 237, 0.5);
+            color: #a78bfa;
+        }
+
+        .reset-button:hover {
+            background: rgba(124, 58, 237, 0.2);
+        }
+
+        .description {
+            border-top: 1px solid rgba(124, 58, 237, 0.2);
+            padding-top: 1rem;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .description p {
+            margin-bottom: 0.5rem;
+        }
+
+        .description strong {
+            color: #cbd5e1;
+        }
+
+        .highlight-inner {
+            color: #7c3aed;
+        }
+
+        .highlight-outer {
+            color: #ec4899;
+        }
+
+        .highlight-accent {
+            color: #06b6d4;
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                flex-direction: column;
+            }
+
+            .control-panel {
+                max-width: none;
+                width: 100%;
+            }
+
+            .visualizer-container {
+                max-height: 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            main {
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .control-panel {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Equal Tuning Visualizer & Metronome</h1>
+            <p>カスタマイズ可能なポリリズムビジュアライザー（音量調整機能付き）</p>
+        </header>
+
+        <main>
+            <div class="visualizer-container">
+                <canvas id="visualizer"></canvas>
+            </div>
+
+            <aside class="control-panel">
+                <div class="control-section">
+                    <div class="bpm-display">
+                        <label>テンポ (BPM)</label>
+                        <span class="bpm-value" id="bpmValue">120</span>
+                    </div>
+                    <input type="range" id="bpmSlider" min="40" max="200" value="120" step="1">
+                    <div class="range-labels">
+                        <span>40</span>
+                        <span>200</span>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>拍子設定</h3>
+                    <div class="time-signature-grid">
+                        <div class="time-signature-card">
+                            <div class="ts-label">内側の円</div>
+                            <div class="ts-controls">
+                                <input type="number" id="innerBeats" class="ts-input" min="1" max="32" value="4">
+                                <span class="ts-separator">/</span>
+                                <input type="number" id="innerDivision" class="ts-input" min="1" max="32" value="4">
+                            </div>
+                            <div class="ts-duration" id="innerDuration">2.00秒/小節</div>
+                        </div>
+                        <div class="time-signature-card outer">
+                            <div class="ts-label">外側の円</div>
+                            <div class="ts-controls">
+                                <input type="number" id="outerBeats" class="ts-input" min="1" max="32" value="13">
+                                <span class="ts-separator">/</span>
+                                <input type="number" id="outerDivision" class="ts-input" min="1" max="32" value="8">
+                            </div>
+                            <div class="ts-duration" id="outerDuration">3.25秒/小節</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>音量設定</h3>
+                    <div class="volume-control">
+                        <div class="volume-label">
+                            <span class="highlight-inner">内側のクリック音</span>
+                            <span class="volume-value" id="innerVolumeValue">50%</span>
+                        </div>
+                        <div class="volume-slider-container">
+                            <span class="volume-icon">🔇</span>
+                            <input type="range" id="innerVolume" min="0" max="100" value="50" step="1">
+                            <span class="volume-icon">🔊</span>
+                        </div>
+                        <button class="sound-test-button" id="testInner">テスト音再生</button>
+                    </div>
+
+                    <div class="volume-control">
+                        <div class="volume-label">
+                            <span class="highlight-outer">外側のクリック音</span>
+                            <span class="volume-value" id="outerVolumeValue">50%</span>
+                        </div>
+                        <div class="volume-slider-container">
+                            <span class="volume-icon">🔇</span>
+                            <input type="range" id="outerVolume" min="0" max="100" value="50" step="1">
+                            <span class="volume-icon">🔊</span>
+                        </div>
+                        <button class="sound-test-button outer" id="testOuter">テスト音再生</button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>コントロール</h3>
+                    <div class="button-group">
+                        <button class="play-button" id="playButton">
+                            <span id="playIcon">▶</span>
+                            <span id="playText">再生</span>
+                        </button>
+                        <button class="reset-button" id="resetButton">↻ リセット</button>
+                    </div>
+                </div>
+
+                <div class="description">
+                    <p><span class="highlight-inner">内側の円</span>と<span class="highlight-outer">外側の円</span>の拍子を自由に設定できます。</p>
+                    <p>各クリック音の音量を個別に調整して、最適なバランスを見つけてください。</p>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        const bpmSlider = document.getElementById('bpmSlider');
+        const bpmValue = document.getElementById('bpmValue');
+        const playButton = document.getElementById('playButton');
+        const playIcon = document.getElementById('playIcon');
+        const playText = document.getElementById('playText');
+        const resetButton = document.getElementById('resetButton');
+
+        // 拍子設定入力
+        const innerBeats = document.getElementById('innerBeats');
+        const innerDivision = document.getElementById('innerDivision');
+        const outerBeats = document.getElementById('outerBeats');
+        const outerDivision = document.getElementById('outerDivision');
+        const innerDuration = document.getElementById('innerDuration');
+        const outerDuration = document.getElementById('outerDuration');
+
+        // 音量設定
+        const innerVolume = document.getElementById('innerVolume');
+        const outerVolume = document.getElementById('outerVolume');
+        const innerVolumeValue = document.getElementById('innerVolumeValue');
+        const outerVolumeValue = document.getElementById('outerVolumeValue');
+        const testInner = document.getElementById('testInner');
+        const testOuter = document.getElementById('testOuter');
+
+        let bpm = 120;
+        let isPlaying = false;
+        let startTime = 0;
+        let audioContext = null;
+        let prevBeatInner = 0;
+        let prevBeatOuter = 0;
+
+        // Canvas高DPI対応
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // BPM更新
+        bpmSlider.addEventListener('input', (e) => {
+            bpm = parseInt(e.target.value);
+            bpmValue.textContent = bpm;
+            updateDurations();
+        });
+
+        // 拍子更新
+        [innerBeats, innerDivision, outerBeats, outerDivision].forEach(input => {
+            input.addEventListener('change', updateDurations);
+        });
+
+        // 音量表示更新
+        innerVolume.addEventListener('input', (e) => {
+            innerVolumeValue.textContent = e.target.value + '%';
+        });
+
+        outerVolume.addEventListener('input', (e) => {
+            outerVolumeValue.textContent = e.target.value + '%';
+        });
+
+        // テスト音再生
+        testInner.addEventListener('click', () => {
+            playClick(1000, 0.1, parseInt(innerVolume.value) / 100);
+        });
+
+        testOuter.addEventListener('click', () => {
+            playClick(800, 0.08, parseInt(outerVolume.value) / 100);
+        });
+
+        // 拍子の小節長を計算・表示
+        function updateDurations() {
+            const inner = parseInt(innerBeats.value) / parseInt(innerDivision.value);
+            const innerDur = (60 / bpm) * inner * 4;
+            innerDuration.textContent = innerDur.toFixed(2) + '秒/小節';
+
+            const outer = parseInt(outerBeats.value) / parseInt(outerDivision.value);
+            const outerDur = (60 / bpm) * outer * 4;
+            outerDuration.textContent = outerDur.toFixed(2) + '秒/小節';
+        }
+
+        updateDurations();
+
+        // 再生/停止
+        playButton.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                startTime = Date.now();
+                playIcon.textContent = '⏸';
+                playText.textContent = '停止';
+                playButton.classList.add('playing');
+            } else {
+                playIcon.textContent = '▶';
+                playText.textContent = '再生';
+                playButton.classList.remove('playing');
+            }
+        });
+
+        // リセット
+        resetButton.addEventListener('click', () => {
+            isPlaying = false;
+            startTime = 0;
+            playIcon.textContent = '▶';
+            playText.textContent = '再生';
+            playButton.classList.remove('playing');
+        });
+
+        // Web Audio APIでクリック音を再生
+        function playClick(frequency = 1000, duration = 0.1, volume = 0.5) {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+
+            osc.frequency.value = frequency;
+            // 最大音量を1.5倍に上げる
+            gain.gain.setValueAtTime(0.45 * volume, now);
+            gain.gain.exponentialRampToValueAtTime(0.015 * volume, now + duration);
+
+            osc.start(now);
+            osc.stop(now + duration);
+        }
+
+        // Canvas描画
+        function draw(elapsedTime) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(canvas.width, canvas.height) / 2 - 40;
+
+            // 背景
+            ctx.fillStyle = '#0a0e27';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // グラデーション背景
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 100);
+            gradient.addColorStop(0, 'rgba(124, 58, 237, 0.1)');
+            gradient.addColorStop(1, 'rgba(10, 14, 39, 0.8)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 内側の円
+            const innerBeatsVal = parseInt(innerBeats.value);
+            const innerDivisionVal = parseInt(innerDivision.value);
+            const innerDurationSec = (60 / bpm) * (innerBeatsVal / innerDivisionVal) * 4;
+            drawCircle(centerX, centerY, radius * 0.6, elapsedTime, innerDurationSec, innerBeatsVal, '#7c3aed', '#06b6d4');
+
+            // 外側の円
+            const outerBeatsVal = parseInt(outerBeats.value);
+            const outerDivisionVal = parseInt(outerDivision.value);
+            const outerDurationSec = (60 / bpm) * (outerBeatsVal / outerDivisionVal) * 4;
+            drawCircle(centerX, centerY, radius, elapsedTime, outerDurationSec, outerBeatsVal, '#ec4899', '#a78bfa');
+
+            // 中央の装飾
+            ctx.fillStyle = 'rgba(124, 58, 237, 0.3)';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#7c3aed';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // 円を描画
+        function drawCircle(centerX, centerY, radius, elapsedTime, beatDuration, beatCount, primaryColor, secondaryColor) {
+            const angle = ((elapsedTime % beatDuration) / beatDuration) * Math.PI * 2 - Math.PI / 2;
+
+            // 円の外枠
+            ctx.strokeStyle = primaryColor;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+
+            // ビート位置のマーカーと時計のような針
+            for (let i = 0; i < beatCount; i++) {
+                const beatAngle = (i / beatCount) * Math.PI * 2 - Math.PI / 2;
+                const x = centerX + Math.cos(beatAngle) * radius;
+                const y = centerY + Math.sin(beatAngle) * radius;
+
+                // ビートの距離を計算
+                let angleDiff = Math.abs(angle - beatAngle);
+                if (angleDiff > Math.PI) {
+                    angleDiff = Math.PI * 2 - angleDiff;
+                }
+
+                // 針に近いビートは明るく表示
+                const brightness = Math.max(0.3, 1 - angleDiff / (Math.PI / 4));
+                const size = 8 + brightness * 6;
+
+                // ビートの円
+                ctx.fillStyle = primaryColor;
+                ctx.globalAlpha = brightness * 0.8;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // グロー効果
+                ctx.strokeStyle = secondaryColor;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = brightness * 0.4;
+                ctx.beginPath();
+                ctx.arc(x, y, size + 4, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.globalAlpha = 1;
+
+                // ビート番号
+                ctx.fillStyle = '#f8fafc';
+                ctx.font = 'bold 14px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.globalAlpha = brightness * 0.9;
+                ctx.fillText(String(i + 1), x, y);
+                ctx.globalAlpha = 1;
+
+                // 時計のような針（各ビートへの線）
+                ctx.strokeStyle = primaryColor;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+
+            // メイン針
+            const needleLength = radius * 0.85;
+            const needleX = centerX + Math.cos(angle) * needleLength;
+            const needleY = centerY + Math.sin(angle) * needleLength;
+
+            // 針のグロー効果
+            const glowGradient = ctx.createRadialGradient(needleX, needleY, 0, needleX, needleY, 25);
+            glowGradient.addColorStop(0, 'rgba(6, 182, 212, 0.8)');
+            glowGradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.3)');
+            glowGradient.addColorStop(1, 'rgba(6, 182, 212, 0)');
+            ctx.fillStyle = glowGradient;
+            ctx.beginPath();
+            ctx.arc(needleX, needleY, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 針本体
+            ctx.strokeStyle = secondaryColor;
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(needleX, needleY);
+            ctx.stroke();
+
+            // 針の先端
+            ctx.fillStyle = '#06b6d4';
+            ctx.beginPath();
+            ctx.arc(needleX, needleY, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 針の先端のグロー
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.arc(needleX, needleY, 12, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+
+            // 中央の接続部
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.6)';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // アニメーションループ
+        function animate() {
+            if (isPlaying) {
+                const elapsedTime = (Date.now() - startTime) / 1000;
+                draw(elapsedTime);
+
+                // ビート検出とクリック音再生
+                const innerBeatsVal = parseInt(innerBeats.value);
+                const innerDivisionVal = parseInt(innerDivision.value);
+                const innerDurationSec = (60 / bpm) * (innerBeatsVal / innerDivisionVal) * 4;
+                const beatInner = Math.floor((elapsedTime / innerDurationSec) * innerBeatsVal) % innerBeatsVal;
+
+                const outerBeatsVal = parseInt(outerBeats.value);
+                const outerDivisionVal = parseInt(outerDivision.value);
+                const outerDurationSec = (60 / bpm) * (outerBeatsVal / outerDivisionVal) * 4;
+                const beatOuter = Math.floor((elapsedTime / outerDurationSec) * outerBeatsVal) % outerBeatsVal;
+
+                if (beatInner !== prevBeatInner) {
+                    playClick(1000, 0.1, parseInt(innerVolume.value) / 100);
+                }
+                if (beatOuter !== prevBeatOuter) {
+                    playClick(800, 0.08, parseInt(outerVolume.value) / 100);
+                }
+
+                prevBeatInner = beatInner;
+                prevBeatOuter = beatOuter;
+            } else {
+                draw(0);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
